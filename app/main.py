@@ -61,6 +61,64 @@ def _seed_candidate_search():
 _seed_candidate_search()
 
 
+# ----------------------------------------------------------------
+# NEW: Claude “MCP Tools” discovery (OAuth-style) endpoint
+# ----------------------------------------------------------------
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+
+@app.get(
+    "/mcp/.well-known/mcp-tools",
+    summary="MCP Tools discovery (for Claude inspector)",
+    status_code=200,
+)
+async def mcp_tools_discovery(request: Request):
+    """
+    Claude’s inspector will GET this and expect:
+      {
+        "version": "YYYY-MM-DD",
+        "tools": {
+          "<tool_id>": {
+            "description": "...",
+            "parameters": { ... JSON Schema ... },
+            "auth": { "type": "none" }
+          },
+          …
+        }
+      }
+    """
+    # OPTIONAL: enforce Bearer token
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": 'Bearer realm="MCP"'},
+            content={}
+        )
+
+    # build the tools map from our in-memory registry
+    from app.routers.register import STORE
+    tools_map: dict[str, dict] = {}
+    for ctx in STORE.values():
+        tools_map[ctx.id] = {
+            "description": ctx.description,
+            # here we assume ctx.parameters is already a JSON-schema fragment:
+            "parameters": {
+                "type": "object",
+                "properties": ctx.parameters,
+                "required": list(ctx.parameters.keys()),
+            },
+            "auth": {"type": "none"}
+        }
+
+    return {
+        "version": "2025-05-20",   # you can update to today’s date
+        "tools": tools_map
+    }
+# ----------------------------------------------------------------
+
+
+
 @app.get(
     "/api/organizations/{org_id}/mcp/start-auth/{registration_id}",
     summary="Claude start-auth hook (no-op redirect)"
