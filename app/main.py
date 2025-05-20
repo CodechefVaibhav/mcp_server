@@ -13,7 +13,8 @@ starlette.responses.Response.init_headers = _safe_init
 # -------------------------------------------------------------
 
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schema.common import ContextNode
@@ -59,6 +60,19 @@ def _seed_candidate_search():
 
 _seed_candidate_search()
 
+
+@app.get("/mcp/start-auth/{registration_id}")
+def start_auth(
+    registration_id: str,
+    redirect_url: str = Query(...),
+    open_in_browser: bool = Query(False)
+):
+    """
+    Claude will call this to start the OAuth flow.
+    For a no-auth tool, just immediately redirect back.
+    """
+    # You could validate `registration_id` here if you like.
+    return RedirectResponse(url=redirect_url)
 
 @app.get("/", summary="Root health check", status_code=200)
 def root():
