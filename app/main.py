@@ -1,29 +1,31 @@
-# --- monkey‐patch to guard against None status_code ---------------------------------
+# app/main.py
+
+# --- monkey-patch to guard against None status_code in tests ---
 import starlette.responses
+_orig_init = starlette.responses.Response.init_headers
 
-_orig_init_headers = starlette.responses.Response.init_headers
-
-def _safe_init_headers(self, headers=None):
-    # If status_code was somehow left None, default to 200
+def _safe_init(self, headers=None):
     if getattr(self, "status_code", None) is None:
         self.status_code = 200
-    return _orig_init_headers(self, headers)
+    return _orig_init(self, headers)
 
-starlette.responses.Response.init_headers = _safe_init_headers
-# ------------------------------------------------------------------------------------
+starlette.responses.Response.init_headers = _safe_init
+# -------------------------------------------------------------
 
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schema.common import ContextNode
-from app.schema.tool   import ToolListResponse
-from app.routers       import register, tools
-from app.routers.register import list_contexts
+from app.schema.tool import ToolListResponse
+from app.routers import register, tools
+from app.routers.register import list_contexts_alias
+
+# Ensure FastAPI.debug exists under pytest
+import fastapi.applications
+fastapi.applications.FastAPI.debug = False
 
 logger = logging.getLogger("uvicorn")
-
-FastAPI.debug = False
 
 app = FastAPI(
     title="MCP Candidate Portal SSE Server",
@@ -31,7 +33,7 @@ app = FastAPI(
     description="Expose candidate search as an MCP tool via SSE"
 )
 
-# Allow ChatMCP client origins
+# Single CORS middleware, safe under TestClient
 try:
     app.add_middleware(
         CORSMiddleware,
@@ -40,59 +42,56 @@ try:
         allow_headers=["*"],
     )
 except RuntimeError:
-    # In test environments (TestClient import), Starlette may consider
-    # the app "started" already—silently skip if so.
-    import logging
-    logging.getLogger("uvicorn.error").warning(
-        "Skipping CORS middleware—app already started"
-    )
+    logger.warning("Skipping CORS (already started)")
 
-@app.on_event("startup")
-def register_default_contexts():
-    # Pre-register built-in SSE tool
-    candidate_context = ContextNode(
+# Auto-seed our built-in SSE tool on import so TestClient sees it immediately
+def _seed_candidate_search():
+    ctx = ContextNode(
         id="candidate_search",
         name="Candidate Search",
         description="Search candidates by experience, location, and department",
-        prompt="",      # no default prompt, it's generated dynamically
-        parameters={}   # if you had schema for params you could list them
+        prompt="",
+        parameters={}
     )
-    from app.routers import register as reg_module
-    reg_module.STORE[candidate_context.id] = candidate_context
-    logger.info("Registered built-in context: candidate_search")
+    from app.routers import register as reg
+    reg.STORE.setdefault(ctx.id, ctx)
+    logger.info("Seeded built-in context: candidate_search")
+
+_seed_candidate_search()
 
 
-  # Also seed at import time so TestClient (without a lifespan context) still sees it:
-register_default_contexts()
-
-@app.get("/", status_code=200,summary="Root health check")
+@app.get("/", summary="Root health check", status_code=200)
 def root():
     return {"message": "MCP SSE Server is up and running"}
 
+
 @app.get(
     "/.well-known/mcp.json",
-    status_code=200,
     summary="MCP Discovery endpoint",
-    response_model=ToolListResponse
+    response_model=ToolListResponse,
+    status_code=200
 )
 def mcp_discovery():
-    # ChatMCP will fetch this to discover available tools
-    return list_contexts()
+    """
+    ChatMCP discovery URL: returns { tools: [ ... ] }
+    """
+    return list_contexts_alias()
 
-# Alias for clients that expect /mcp.json
+
+# Alias for /mcp.json
 app.add_api_route(
     "/mcp.json",
-    endpoint=mcp_discovery,
+    mcp_discovery,
     methods=["GET"],
     summary="Alias for MCP Discovery",
     status_code=200,
 )
 
-# Mount routers
-app.include_router(register.router, prefix="",         tags=["register"])
-app.include_router(register.router, prefix="/register", tags=["register"])
-app.include_router(tools.router,    prefix="/tools",    tags=["tools"])
+# Mount our routers
+app.include_router(register.router, prefix="", tags=["register"])
+app.include_router(tools.router,    prefix="/tools", tags=["tools"])
 
-@app.get("/health",status_code=200, summary="Health check")
+
+@app.get("/health", summary="Health check", status_code=200)
 def health():
     return {"status": "ok"}
