@@ -9,7 +9,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # ─── YOUR KEYCLOAK CONFIG ────────────────────────────────────────────
-ISSUER = "https://your-keycloak.example.com/auth/realms/your-realm"
+ISSUER = "https://uat-auth.peoplestrong.com/auth/realms/3"
 AUDIENCE = "mcp"
 JWKS_URL = f"{ISSUER}/protocol/openid-connect/certs"
 # ──────────────────────────────────────────────────────────────────────
