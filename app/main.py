@@ -72,6 +72,7 @@ def start_auth(
     For a no-auth tool, just immediately redirect back.
     """
     # You could validate `registration_id` here if you like.
+    logger.info("registration id: %s" , registration_id)
     return RedirectResponse(url=redirect_url)
 
 @app.get("/", summary="Root health check", status_code=200)
