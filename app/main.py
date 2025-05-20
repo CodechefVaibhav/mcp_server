@@ -88,13 +88,13 @@ async def mcp_tools_discovery(request: Request):
       }
     """
     # OPTIONAL: enforce Bearer token
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": 'Bearer realm="MCP"'},
-            content={}
-        )
+    #auth = request.headers.get("authorization", "")
+    #if not auth.startswith("Bearer "):
+    #    return JSONResponse(
+    #        status_code=status.HTTP_401_UNAUTHORIZED,
+    #        headers={"WWW-Authenticate": 'Bearer realm="MCP"'},
+    #        content={}
+    #   )
 
     # build the tools map from our in-memory registry
     from app.routers.register import STORE
