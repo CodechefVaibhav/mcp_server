@@ -3,6 +3,7 @@ uvicorn==0.17.0
 pydantic==1.9.0
 python-multipart==0.0.5
 sse-starlette==1.1.6  # for SSE support compatible with Starlette 0.14.x
+python-jose[cryptography]
 anyio==3.6.2
 httpx==0.23.3       # required by starlette.testclient
 pytest==7.2.0       # for running your tests
