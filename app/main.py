@@ -61,18 +61,22 @@ def _seed_candidate_search():
 _seed_candidate_search()
 
 
-@app.get("/mcp/start-auth/{registration_id}")
-def start_auth(
+@app.get(
+    "/api/organizations/{org_id}/mcp/start-auth/{registration_id}",
+    summary="Claude start-auth hook (no-op redirect)"
+)
+def claude_start_auth(
+    org_id: str,
     registration_id: str,
     redirect_url: str = Query(...),
     open_in_browser: bool = Query(False)
 ):
     """
-    Claude will call this to start the OAuth flow.
-    For a no-auth tool, just immediately redirect back.
+    Claude will hit this URL to initiate auth.
+    We don't actually do OAuth here, so immediately bounce back
+    to the supplied redirect_url.
     """
-    # You could validate `registration_id` here if you like.
-    logger.info("registration id: %s" , registration_id)
+    # (You could sanity-check org_id or registration_id here if you want.)
     return RedirectResponse(url=redirect_url)
 
 @app.get("/", summary="Root health check", status_code=200)
