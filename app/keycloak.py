@@ -2,7 +2,7 @@
 import asyncio
 import time
 from typing import Dict, Any
-
+import logging
 import httpx
 from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends
@@ -13,7 +13,7 @@ ISSUER = "https://uat-auth.peoplestrong.com/auth/realms/3"
 AUDIENCE = "mcp"
 JWKS_URL = f"{ISSUER}/protocol/openid-connect/certs"
 # ──────────────────────────────────────────────────────────────────────
-
+logger = logging.getLogger("uvicorn")
 # HTTPBearer will extract and validate the "Authorization: Bearer <token>" header
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -29,6 +29,7 @@ async def _get_jwks() -> Dict[str, Any]:
     # reload if stale
     if not _jwks_cache or now - _jwks_cache_ts > _JWKS_CACHE_TTL:
         async with httpx.AsyncClient() as client:
+            logger.info("Called keycloak %s",JWKS_URL)
             r = await client.get(JWKS_URL, timeout=5.0)
             r.raise_for_status()
             _jwks_cache = r.json()
@@ -52,8 +53,8 @@ async def verify_access_token(
             detail="Missing or invalid Authorization header",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     token = creds.credentials
+    logger.info("VERIFY ACCESS TOKEN %s", token)
     jwks = await _get_jwks()
     try:
         payload = jwt.decode(

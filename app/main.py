@@ -89,6 +89,7 @@ async def mcp_tools_discovery(
       }
     }
     """
+    logger.info("mcp_tools_discovery**** %s",token_payload)
     # you could enforce specific scopes here, e.g. "offer:write"
     scopes = token_payload.get("scope", "").split()
 
@@ -113,23 +114,6 @@ async def mcp_tools_discovery(
         "version": "2025-05-20",
         "tools": tools_map
     }
-
-# ----------------------------------------------------------------
-# 2) Claude start-auth hook (no-op redirect)
-# ----------------------------------------------------------------
-from fastapi import Query
-
-@app.get(
-    "/api/organizations/{org_id}/mcp/start-auth/{registration_id}",
-    summary="Claude start-auth hook (no-op redirect)"
-)
-def claude_start_auth(
-    org_id: str,
-    registration_id: str,
-    redirect_url: str = Query(...),
-    open_in_browser: bool = Query(False)
-):
-    return RedirectResponse(url=redirect_url)
 
 # ----------------------------------------------------------------
 # 3) Unprotected discovery for ChatMCP (ToolListResponse)
