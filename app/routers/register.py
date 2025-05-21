@@ -10,12 +10,11 @@ from app.schema.tool import ToolListResponse
 logger = logging.getLogger("register")
 router = APIRouter()
 
-# In-memory store shared by all endpoints here
+# Shared in-memory store
 STORE: Dict[str, ContextNode] = {}
 
-
 #
-# — alias MCP endpoints (for ChatMCP compatibility) —
+# — ChatMCP–style “alias” endpoints —
 #
 @router.post(
     "/context",
@@ -24,16 +23,11 @@ STORE: Dict[str, ContextNode] = {}
     summary="Register a tool/context node (alias)"
 )
 async def register_context_alias(node: ContextNode):
-    """
-    POST /context  → ContextNode
-    (alias form for ChatMCP)
-    """
-    logger.info(f"[alias] registering {node.id}")
+    logger.info("[alias] registering %s", node.id)
     if node.id in STORE:
         raise HTTPException(400, "Node already exists")
     STORE[node.id] = node
     return node
-
 
 @router.get(
     "/context",
@@ -42,21 +36,16 @@ async def register_context_alias(node: ContextNode):
     summary="List all registered context nodes (alias)"
 )
 def list_contexts_alias():
-    """
-    GET /context  → { tools: [ ... ] }
-    auto-seeds built-in candidate_search
-    """
     logger.info("[alias] listing contexts")
-    default_ctx = ContextNode(
+    default = ContextNode(
         id="candidate_search",
         name="Candidate Search",
         description="Search candidates by experience, location, and department",
         prompt="",
         parameters={}
     )
-    STORE.setdefault(default_ctx.id, default_ctx)
+    STORE.setdefault(default.id, default)
     return ToolListResponse(tools=list(STORE.values()))
-
 
 @router.get(
     "/context/{node_id}",
@@ -65,18 +54,14 @@ def list_contexts_alias():
     summary="Retrieve a registered context node by ID (alias)"
 )
 def get_context_alias(node_id: str):
-    """
-    GET /context/{node_id}  → ContextNode
-    """
-    logger.info(f"[alias] getting context {node_id}")
+    logger.info("[alias] getting context %s", node_id)
     node = STORE.get(node_id)
     if not node:
         raise HTTPException(404, "Context node not found")
     return node
 
-
 #
-# — “mcp_server.py” style endpoints —
+# — classic MCP-server–style endpoints —
 #
 @router.post(
     "/register",
@@ -85,16 +70,11 @@ def get_context_alias(node_id: str):
     summary="Register a tool/context node"
 )
 async def register_context(node: ContextNode):
-    """
-    POST /register  → ContextNode
-    (classic MCP-server style)
-    """
-    logger.info(f"[mcp] registering {node.id}")
+    logger.info("[mcp] registering %s", node.id)
     if node.id in STORE:
         raise HTTPException(400, "Node already exists")
     STORE[node.id] = node
     return node
-
 
 @router.get(
     "/context-all",
@@ -103,12 +83,8 @@ async def register_context(node: ContextNode):
     summary="List all registered context nodes (flat)"
 )
 def list_contexts_mcp_server():
-    """
-    GET /context-all  → [ ContextNode, ... ]
-    """
     logger.info("[mcp] listing contexts flat")
     return list(STORE.values())
-
 
 @router.post(
     "/resolve",
@@ -117,10 +93,7 @@ def list_contexts_mcp_server():
     summary="Resolve a bundle of context node IDs"
 )
 def resolve_bundle(ids: List[str]):
-    """
-    POST /resolve  ["id1","id2"]  → { "bundle": [ node1, node2 ] }
-    """
-    logger.info(f"[mcp] resolving bundle {ids}")
+    logger.info("[mcp] resolving bundle %s", ids)
     bundle: List[ContextNode] = []
     for node_id in ids:
         node = STORE.get(node_id)
