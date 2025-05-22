@@ -19,7 +19,7 @@ from app.schema.common import ContextNode
 from app.schema.tool import ToolListResponse
 from app.routers import register, tools
 from app.routers.register import list_contexts_alias, STORE
-from app.keycloak import verify_access_token, ISSUER
+from app.keycloak import verify_access_token, ISSUER, OIDC_BASE
 
 import fastapi.applications
 fastapi.applications.FastAPI.debug = False
@@ -73,71 +73,42 @@ async def oauth_protected_resource(
 # 2) OIDC metadata
 @app.get(
     "/.well-known/oauth-authorization-server",
-    summary="OIDC discovery",
+    summary="OIDC discovery (minimal)",
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
 )
-def oidc_discovery():
+def oidc_discovery_minimal():
     """
-    OpenID Connect Discovery metadata, mirroring the TS example.
+    Returns a minimal OIDC discovery document:
+    {
+      "issuer": "...",
+      "authorization_endpoint": "...",
+      "token_endpoint": "...",
+      "registration_endpoint": "...",
+      "response_types_supported": [...],
+      "response_modes_supported": [...],
+      "grant_types_supported": [...],
+      "token_endpoint_auth_methods_supported": [...],
+      "revocation_endpoint": "...",
+      "code_challenge_methods_supported": [...]
+    }
     """
+    # you can also pull these lists from config if you like
     return {
-        "issuer": ISSUER,
-        "authorization_endpoint": f"{ISSUER}/protocol/openid-connect/auth",
-        "token_endpoint": f"{ISSUER}/protocol/openid-connect/token",
-        "token_introspection_endpoint": f"{ISSUER}/protocol/openid-connect/token/introspect",
-        "userinfo_endpoint": f"{ISSUER}/protocol/openid-connect/userinfo",
-        "end_session_endpoint": f"{ISSUER}/protocol/openid-connect/logout",
-        "jwks_uri": f"{ISSUER}/protocol/openid-connect/certs",
-        "check_session_iframe": f"{ISSUER}/protocol/openid-connect/login-status-iframe.html",
-        "grant_types_supported": [
-            "authorization_code", "implicit", "refresh_token",
-            "password", "client_credentials"
-        ],
-        "response_types_supported": [
-            "code", "none", "id_token", "token", "id_token token",
-            "code id_token", "code token", "code id_token token"
-        ],
-        "subject_types_supported": ["public", "pairwise"],
-        "id_token_signing_alg_values_supported": [
-            "PS384","ES384","RS384","HS256","HS512","ES256",
-            "RS256","HS384","ES512","PS256","PS512","RS512"
-        ],
-        "id_token_encryption_alg_values_supported": ["RSA-OAEP","RSA1_5"],
-        "id_token_encryption_enc_values_supported": ["A128GCM","A128CBC-HS256"],
-        "userinfo_signing_alg_values_supported": [
-            "PS384","ES384","RS384","HS256","HS512","ES256",
-            "RS256","HS384","ES512","PS256","PS512","RS512","none"
-        ],
-        "request_object_signing_alg_values_supported": [
-            "PS384","ES384","RS384","HS256","HS512","ES256",
-            "RS256","HS384","ES512","PS256","PS512","RS512","none"
-        ],
-        "response_modes_supported": ["query","fragment","form_post"],
-        "registration_endpoint": f"{ISSUER}/clients-registrations/openid-connect",
+        "issuer": OIDC_BASE,
+        "authorization_endpoint": f"{OIDC_BASE}/authorize",
+        "token_endpoint": f"{OIDC_BASE}/token",
+        "registration_endpoint": f"{OIDC_BASE}/register",
+        "response_types_supported": ["code"],
+        "response_modes_supported": ["query"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
         "token_endpoint_auth_methods_supported": [
-            "private_key_jwt","client_secret_basic","client_secret_post",
-            "tls_client_auth","client_secret_jwt"
+            "client_secret_basic",
+            "client_secret_post",
+            "none"
         ],
-        "token_endpoint_auth_signing_alg_values_supported": [
-            "PS384","ES384","RS384","HS256","HS512","ES256",
-            "RS256","HS384","ES512","PS256","PS512","RS512"
-        ],
-        "claims_supported": [
-            "aud","sub","iss","auth_time","name","given_name",
-            "family_name","preferred_username","email","acr"
-        ],
-        "claim_types_supported": ["normal"],
-        "claims_parameter_supported": False,
-        "scopes_supported": [
-            "openid","offer:write","microprofile-jwt","web-origins",
-            "roles","offline_access","phone","address","email","profile"
-        ],
-        "request_parameter_supported": True,
-        "request_uri_parameter_supported": True,
-        "require_request_uri_registration": True,
-        "code_challenge_methods_supported": ["plain","S256"],
-        "tls_client_certificate_bound_access_tokens": True,
+        "revocation_endpoint": f"{OIDC_BASE}/token",
+        "code_challenge_methods_supported": ["plain", "S256"],
     }
 
 # 3) Inspector-style MCP-tools discovery

@@ -12,6 +12,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 ISSUER     = "https://uat-auth.peoplestrong.com/auth/realms/3"
 AUDIENCE   = "mcp"
 JWKS_URL   = f"{ISSUER}/protocol/openid-connect/certs"
+OIDC_BASE  = "https://mcp.paypal.com"
 # ──────────────────────────────────────────────────────────────────────
 
 logger = logging.getLogger("uvicorn")
