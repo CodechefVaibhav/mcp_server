@@ -64,8 +64,7 @@ _seed()
 )
 async def oauth_protected_resource():
     return {
-        "resource": f"{app.root_path}/mcp",
-        "authorization_servers": [ISSUER]
+        "resource": f"{app.root_path}/mcp"
     }
 
 # 2) OIDC metadata
