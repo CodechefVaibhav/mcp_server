@@ -62,9 +62,7 @@ _seed()
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
 )
-async def oauth_protected_resource(
-    token_payload = Depends(verify_access_token)
-):
+async def oauth_protected_resource():
     return {
         "resource": f"{app.root_path}/mcp",
         "authorization_servers": [ISSUER]
@@ -160,10 +158,7 @@ def oidc_discovery_complete():
     response_class=JSONResponse,
     status_code=status.HTTP_200_OK,
 )
-async def mcp_tools_discovery(
-    token_payload = Depends(verify_access_token),
-):
-    scopes = token_payload.get("scope", "").split()
+async def mcp_tools_discovery():
     tools_map = {}
     for ctx in STORE.values():
         tools_map[ctx.id] = {
@@ -178,7 +173,7 @@ async def mcp_tools_discovery(
                 "client_id": "claude-mcp",  # your registered MCP client
                 "registration_endpoint":
                   f"{app.root_path}/api/organizations/{{orgId}}/mcp/start-auth/{{registrationId}}",
-                "scopes": scopes,
+                "scopes": {},
             }
         }
     return {
